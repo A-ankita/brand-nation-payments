@@ -1,6 +1,7 @@
 import Razorpay from 'razorpay';
 import {randomUUID} from 'node:crypto';
 import {prepare, priceCart, getKeys} from './_shared.js';
+import {db,safeCustomer} from './_orders.js';
 
 export default async function handler(req,res) {
   if (!prepare(req,res)) return;
@@ -9,6 +10,14 @@ export default async function handler(req,res) {
     const razorpay = new Razorpay(getKeys());
     const receipt = `bn_${randomUUID().replaceAll('-','').slice(0,24)}`;
     const order = await razorpay.orders.create({amount:total,currency:'INR',receipt,notes:{cart:JSON.stringify(normalized).slice(0,240)}});
+    try {
+      const sql=db();
+      const customer=safeCustomer(req.body?.customer);
+      await sql`INSERT INTO brand_nation_orders (razorpay_order_id,receipt,amount_paise,currency,items,customer) VALUES (${order.id},${receipt},${total},'INR',${sql.json(normalized)},${sql.json(customer)})`;
+    } catch (storageError) {
+      console.error('Order persistence failed:',storageError.message);
+      return res.status(503).json({error:'Order storage unavailable; payment not started'});
+    }
     return res.status(200).json({order_id:order.id,amount:order.amount,currency:order.currency,key_id:process.env.RAZORPAY_KEY_ID});
   } catch (err) {
     if (/Invalid|Unavailable|not configured/.test(err.message) && !/credentials/.test(err.message)) return res.status(400).json({error:err.message});
