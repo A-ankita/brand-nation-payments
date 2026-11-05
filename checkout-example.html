@@ -1,0 +1,18 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Brand Nation Payment Test</title><script src="https://checkout.razorpay.com/v1/checkout.js"></script></head><body style="font:16px Arial;padding:30px;max-width:600px;margin:auto"><h1>Brand Nation — Test Checkout</h1><p>This is a TEST checkout. Never use real cards in test mode.</p><button id="pay">Pay for checked shirt (test)</button><p id="status" role="status"></p><script>
+const API_BASE = location.origin; // On GitHub Pages, replace with your Vercel deployment URL.
+const statusEl=document.getElementById('status');
+const button=document.getElementById('pay');
+button.addEventListener('click',async()=>{
+ button.disabled=true;statusEl.textContent='Creating secure order…';
+ try{
+  const response=await fetch(API_BASE+'/api/create-order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:[{id:'checked-shirts',quantity:1,size:'M'}]})});
+  const data=await response.json();if(!response.ok)throw Error(data.error||'Could not create order');
+  const checkout=new Razorpay({key:data.key_id,amount:data.amount,currency:data.currency,order_id:data.order_id,name:'Brand Nation',description:'Test purchase',handler:async(payment)=>{
+   statusEl.textContent='Verifying payment…';
+   try{const r=await fetch(API_BASE+'/api/verify-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payment)});const v=await r.json();if(!r.ok||!v.paid)throw Error(v.error||v.message||'Payment not captured');statusEl.textContent='Payment verified and captured (test mode).';}catch(e){statusEl.textContent='Verification pending: '+e.message+' — contact store before retrying.';}finally{button.disabled=false;}
+  },modal:{ondismiss:()=>{statusEl.textContent='Checkout cancelled.';button.disabled=false;}}});
+  checkout.on('payment.failed',e=>{statusEl.textContent='Payment failed: '+(e.error.description||'Please try again');button.disabled=false;});
+  checkout.open();
+ }catch(e){statusEl.textContent=e.message;button.disabled=false;}
+});
+</script></body></html>
