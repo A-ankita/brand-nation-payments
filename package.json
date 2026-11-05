@@ -1,0 +1,9 @@
+{
+  "name": "brand-nation-razorpay-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"dev": "vercel dev", "test": "node --test"},
+  "dependencies": {"razorpay": "^2.9.6"},
+  "engines": {"node": ">=20"}
+}
