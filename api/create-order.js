@@ -1,6 +1,7 @@
 import Razorpay from 'razorpay';
 import {randomUUID} from 'node:crypto';
 import {prepare, priceCart, getKeys} from './_shared.js';
+import {saveCreatedOrder} from './_db.js';
 
 export default async function handler(req,res) {
   if (!prepare(req,res)) return;
@@ -9,6 +10,7 @@ export default async function handler(req,res) {
     const razorpay = new Razorpay(getKeys());
     const receipt = `bn_${randomUUID().replaceAll('-','').slice(0,24)}`;
     const order = await razorpay.orders.create({amount:total,currency:'INR',receipt,notes:{cart:JSON.stringify(normalized).slice(0,240)}});
+    await saveCreatedOrder(order, normalized, req.body?.customer);
     return res.status(200).json({order_id:order.id,amount:order.amount,currency:order.currency,key_id:process.env.RAZORPAY_KEY_ID});
   } catch (err) {
     if (/Invalid|Unavailable|not configured/.test(err.message) && !/credentials/.test(err.message)) return res.status(400).json({error:err.message});
