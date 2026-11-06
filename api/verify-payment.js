@@ -1,5 +1,6 @@
 import Razorpay from 'razorpay';
 import {prepare,verifySignature,getKeys} from './_shared.js';
+import {markCaptured} from './_db.js';
 
 export default async function handler(req,res) {
   if (!prepare(req,res)) return;
@@ -14,6 +15,8 @@ export default async function handler(req,res) {
       return res.status(409).json({error:'Payment details or status do not match',verified:false});
     }
     if (payment.status!=='captured') return res.status(202).json({verified:true,paid:false,status:payment.status,message:'Payment authorized but not captured; do not fulfil yet'});
+    const saved = await markCaptured(orderId, paymentId, payment.amount);
+    if (!saved) return res.status(503).json({error:'Payment captured but order record could not be updated; contact support with your payment ID',verified:true,paid:true,order_id:orderId,payment_id:paymentId});
     return res.status(200).json({verified:true,paid:true,status:'captured',order_id:orderId,payment_id:paymentId});
   } catch(err) {
     const code=err?.statusCode||err?.status;
