@@ -27,6 +27,7 @@ export async function markCaptured(orderId, paymentId, amountPaise) {
         captured_at = COALESCE(captured_at, NOW())
     WHERE razorpay_order_id = ${orderId}
       AND amount_paise = ${amountPaise}
+      AND status IN ('created', 'captured')
       AND (razorpay_payment_id IS NULL OR razorpay_payment_id = ${paymentId})
     RETURNING razorpay_order_id
   `;
