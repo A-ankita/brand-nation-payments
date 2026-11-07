@@ -22,12 +22,12 @@ export async function markCaptured(orderId, paymentId, amountPaise) {
   const sql = db();
   const rows = await sql`
     UPDATE public.brand_nation_orders
-    SET status = 'captured',
+    SET status = CASE WHEN status = 'confirmed' THEN 'confirmed' ELSE 'captured' END,
         razorpay_payment_id = ${paymentId},
         captured_at = COALESCE(captured_at, NOW())
     WHERE razorpay_order_id = ${orderId}
       AND amount_paise = ${amountPaise}
-      AND status IN ('created', 'captured')
+      AND status IN ('created', 'captured', 'confirmed')
       AND (razorpay_payment_id IS NULL OR razorpay_payment_id = ${paymentId})
     RETURNING razorpay_order_id
   `;
