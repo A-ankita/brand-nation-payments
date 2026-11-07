@@ -32,3 +32,24 @@ export async function markCaptured(orderId, paymentId, amountPaise) {
   `;
   return rows.length === 1;
 }
+
+export async function claimConfirmationEmail(orderId) {
+  const sql = db();
+  const rows = await sql`
+    UPDATE public.brand_nation_orders
+    SET status = 'confirmation_sending'
+    WHERE razorpay_order_id = ${orderId} AND status = 'captured'
+    RETURNING razorpay_order_id, amount_paise, currency, items, customer
+  `;
+  return rows[0] || null;
+}
+
+export async function finishConfirmationEmail(orderId, success) {
+  const sql = db();
+  await sql`
+    UPDATE public.brand_nation_orders
+    SET status = ${success ? 'confirmed' : 'captured'}
+    WHERE razorpay_order_id = ${orderId} AND status = 'confirmation_sending'
+  `;
+}
+
